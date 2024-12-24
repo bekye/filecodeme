@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <cstdlib>
 #include <ctime>
 #define ADMIN_PIN 1234
@@ -13,19 +14,24 @@ struct Item {
     int quantity = 0;
 };
 
-// Class to handle food delivery system operations
+struct CartItem {
+    string foodName;
+    double price;
+    int quantity;
+};
+
 class Food {
 public:
-    void placeOrder(Item);                // Place an order for a food item
-    void startPage();                     // Display the main menu of the program
-    void viewMenu();                      // Display the list of food items
-    void view();                          // Admin view for restocking
-    void authAdmin(Item *foods, int size); // Authenticate admin and allow restocking
-    void restockItem(Item *foods, int size); // Restock a specific food item
-    void saveMenu(Item *foods, int size); // Save the current menu to a file
-    void loadMenu(Item *foods, int size); // Load the menu from a file
-    void trackDelivery(string location);  // Track delivery status
-    void paymentProcess(double totalCost); // Handle payment process
+    void placeOrder(vector<CartItem> &cart);                // Place an order for a list of food items
+    void startPage();                                      // Display the main menu of the program
+    void viewMenu();                                       // Display the list of food items
+    void view();                                           // Admin view for restocking
+    void authAdmin(Item *foods, int size);                 // Authenticate admin and allow restocking
+    void restockItem(Item *foods, int size);               // Restock a specific food item
+    void saveMenu(Item *foods, int size);                  // Save the current menu to a file
+    void loadMenu(Item *foods, int size);                  // Load the menu from a file
+    void trackDelivery(string location);                   // Track delivery status
+    void paymentProcess(double totalCost);                 // Handle payment process
 };
 
 void Food::authAdmin(Item *foods, int size) {
@@ -42,16 +48,21 @@ void Food::authAdmin(Item *foods, int size) {
     }
 }
 
-void Food::placeOrder(Item foodItem) {
-    double totalCost = foodItem.price * foodItem.quantity;
+void Food::placeOrder(vector<CartItem> &cart) {
+    double totalCost = 0;
     string location;
 
     cout << "Enter your delivery location: ";
     getline(cin, location);
 
-    cout << "Hello, your order is placed\n";
-    cout << "Ordered Food: " << foodItem.foodName;
-    cout << "\nQuantity: " << foodItem.quantity;
+    cout << "\nHello, your order is placed\n";
+    for (const auto &item : cart) {
+        cout << "Ordered Food: " << item.foodName << "\n";
+        cout << "Quantity: " << item.quantity << "\n";
+        cout << "Price: " << item.price * item.quantity << " Birr\n";
+        totalCost += item.price * item.quantity;
+    }
+
     cout << "\nTotal Price: " << totalCost << " Birr\n";
     cout << "Delivery Location: " << location << "\n";
 
@@ -86,14 +97,17 @@ void Food::paymentProcess(double totalCost) {
 
     switch (paymentMethod) {
     case 1:
+        cout << "Our account number is 100025234652347:\n ";
         cout << "Enter your mobile banking account number: ";
         getline(cin, accountNumber);
         cout << "Payment of " << totalCost << " Birr is successful from account " << accountNumber << ".\n";
         break;
     case 2:
+        cout << "Our account number is 100025234652347: \n";
         cout << "You chose Cash on Delivery. Please prepare " << totalCost << " Birr for payment.\n";
         break;
     case 3:
+        cout << "Our account number is 100025234652347: \n";
         cout << "Enter your card number: ";
         getline(cin, accountNumber);
         cout << "Payment of " << totalCost << " Birr is successful using card ending in " << accountNumber.substr(accountNumber.length() - 4) << ".\n";
@@ -153,6 +167,7 @@ void Food::view() {
 
 void Food::viewMenu() {
     int itemId, quantity;
+    vector<CartItem> cart;
     Item foods[6];
     loadMenu(foods, 6);
 
@@ -164,37 +179,49 @@ void Food::viewMenu() {
     }
     cout << "*************************************************************\n";
 
-    cout << "Enter item ID to buy: ";
-    cin >> itemId;
-    cin.ignore();
-
-    if (itemId < 0 || itemId >= 6) {
-        cout << "Invalid item ID. Please try again.\n";
-        return;
-    }
-
-    Item &selectedItem = foods[itemId];
-
-    if (selectedItem.quantity == 0) {
-        cout << "Sorry, the item is out of stock. Admin needs to restock.\n";
-        return;
-    }
-
-    do {
-        cout << "Enter quantity: ";
-        cin >> quantity;
+    while (true) {
+        cout << "Enter item ID to buy (-1 to 5): ";
+        cin >> itemId;
         cin.ignore();
 
-        if (quantity > selectedItem.quantity) {
-            cout << "Sorry, we only have " << selectedItem.quantity << " available.\n";
+        if (itemId == -1) {
+            break;
         }
-    } while (quantity <= 0 || quantity > selectedItem.quantity);
 
-    selectedItem.quantity -= quantity;
+        if (itemId < 0 || itemId >= 6) {
+            cout << "Invalid item ID. Please try again.\n";
+            continue;
+        }
+
+        Item &selectedItem = foods[itemId];
+
+        if (selectedItem.quantity == 0) {
+            cout << "Sorry, the item is out of stock. Admin needs to restock.\n";
+            continue;
+        }
+
+        do {
+            cout << "Enter quantity: ";
+            cin >> quantity;
+            cin.ignore();
+
+            if (quantity > selectedItem.quantity) {
+                cout << "Sorry, we only have " << selectedItem.quantity << " available.\n";
+            }
+        } while (quantity <= 0 || quantity > selectedItem.quantity);
+
+        selectedItem.quantity -= quantity;
+        cart.push_back({selectedItem.foodName, selectedItem.price, quantity});
+    }
+
     saveMenu(foods, 6);
 
-    selectedItem.quantity = quantity;
-    placeOrder(selectedItem);
+    if (!cart.empty()) {
+        placeOrder(cart);
+    } else {
+        cout << "No items were selected. Returning to main menu.\n";
+        startPage();
+    }
 }
 
 void Food::restockItem(Item *foods, int size) {
@@ -280,3 +307,4 @@ int main() {
     food.startPage();
     return 0;
 }
+
